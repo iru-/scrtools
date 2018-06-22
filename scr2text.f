@@ -1,38 +1,28 @@
 #! /usr/bin/env gforth
 warnings off
 
-include ../mf/mf.f
+require ../mf/mf.f
 
                  64 constant /line
                  16 constant lines/block
 /line lines/block * constant /block
 
-create line /line allot
+create block /block allot
 
-: open    ( a n -- fd )  r/o open-file throw ;
-: size    ( fd -- n )    file-size throw d>s ;
-: blocks  ( fd -- n )    size /block / ;
-: read    ( fd -- )
-  push line /line pop read-file throw
-  /line <> abort" short read" ;
+: .header  ( n -- )  ." ( -- BLOCK "  .  ." -- )" ;
+: line#    ( n -- )  lines/block swap - ;
+: line     ( n -- )  line# /line *  block + ;
+: .line    ( n -- )  line /line -trailing type ;
+: .block             lines/block for i .line cr next ;
 
-: line>text   ( fd -- )  read line /line -trailing type ;
-: block>text  ( fd -- )  lines/block for dup cr line>text next ;
+: open  ( a n -- fd )  r/o open-file throw ;
+: read  ( fd -- n )    push block /block pop read-file throw  /block = ;
 
-\ assumes a has the current block number
-: block#  ( -- n )  a dup 1+ a! ; 
+: .blocks  ( fd -- )
+  1 begin over read while dup .header 1+ cr .block repeat drop drop ;
 
-: fd>text   ( fd -- )
-  1 a!  dup blocks for
-    ." \ --- Block "  block# .  ." --- "
-    block>text
-    cr
-  next ;
-
-
-: usage  ." usage: scr2text file" cr bye ;
-: main
-  argc @ 1 <= if drop usage then drop
-  1 arg open fd>text bye ;
+: usage  ." usage: scr2text file" cr ;
+: main   argc @ 1 > if 1 arg open else stdin then .blocks ;
 
 main
+bye
